@@ -1,0 +1,18 @@
+<mat-toolbar color="primary" class="header-toolbar">
+  <span class="help-desk-title">Help Desk</span>
+  <span class="spacer"></span>
+  
+  <!-- Menú de usuario con opción de logout -->
+  <button mat-button [matMenuTriggerFor]="userMenu" class="user-menu-button">
+    <span>user2</span>
+    <mat-icon>account_circle</mat-icon>
+    <mat-icon>arrow_drop_down</mat-icon>
+  </button>
+  
+  <mat-menu #userMenu="matMenu">
+    <button mat-menu-item (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      <span>Cerrar Sesión</span>
+    </button>
+  </mat-menu>
+</mat-toolbar>

@@ -1,0 +1,165 @@
+/* Top Navigation Bar */
+.top-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 0;
+}
+
+.breadcrumbs {
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.username {
+  font-weight: 500;
+  color: #333;
+}
+
+.register-btn {
+  background-color: #e91e63;
+  color: white;
+}
+
+.global-search {
+  min-width: 250px;
+}
+
+.search-field {
+  width: 100%;
+}
+
+/* Main Content */
+.main-content {
+  padding: 0;
+}
+
+.content-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 0;
+  padding: 16px;
+  margin: 0;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+.action-btn {
+  color: #666;
+  border-color: #ddd;
+  font-size: 14px;
+}
+
+.action-btn mat-icon {
+  margin-right: 8px;
+}
+
+/* Table */
+.table-container {
+  margin-bottom: 0;
+  margin-top: 0;
+}
+
+.credits-table {
+  width: 100%;
+  background: white;
+}
+
+.credits-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.credits-table td {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 12px 8px;
+}
+
+.credits-table tr:hover {
+  background-color: #f8f9fa;
+}
+
+/* Client Info */
+.client-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.client-name {
+  font-weight: 500;
+  color: #333;
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-activo {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+}
+
+.status-vencido {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.status-pagado {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+/* Action Buttons Cell */
+.action-buttons-cell {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.action-buttons-cell button {
+  min-width: 40px;
+  height: 40px;
+}
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .top-navbar {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .user-info {
+    justify-content: center;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .credits-table {
+    font-size: 14px;
+  }
+}

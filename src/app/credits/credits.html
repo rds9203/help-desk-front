@@ -1,0 +1,242 @@
+<!-- Top Navigation Bar -->
+<div class="top-navbar">
+  <div class="breadcrumbs">
+    <span>Créditos</span>
+  </div>
+  
+  <div class="user-info">
+    <button mat-raised-button color="primary" class="register-btn" (click)="openCreateDialog()">
+      Nuevo Crédito
+    </button>
+    
+    <!-- Botón para cambiar rol (solo para testing) -->
+    <button mat-stroked-button color="accent" (click)="toggleUserRole()" style="margin-left: 8px;">
+      {{ isAdmin() ? 'Cambiar a Usuario' : 'Cambiar a Admin' }}
+    </button>
+  </div>
+  
+  <!-- Solo mostrar búsqueda para admins -->
+  <div class="global-search" *ngIf="isAdmin()">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Buscar...</mat-label>
+      <input matInput [(ngModel)]="searchTerm" (input)="onSearchChange($event)">
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content">
+  <mat-card class="content-card">
+    <!-- Action Buttons -->
+    <div class="action-buttons" *ngIf="isAdmin()">
+      <button mat-stroked-button class="action-btn" (click)="toggleAdminFields()">
+        <mat-icon>{{ showAdminFields() ? 'visibility_off' : 'visibility' }}</mat-icon>
+        {{ showAdminFields() ? 'Ocultar campos admin' : 'Mostrar campos admin' }}
+      </button>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div *ngIf="loading()" style="text-align: center; padding: 20px;">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Cargando créditos...</p>
+    </div>
+
+    <!-- Credits Table -->
+    <div class="table-container" *ngIf="!loading()">
+      <table mat-table [dataSource]="dataSource" class="credits-table">
+              <!-- Select All Column - Solo para admins -->
+              <ng-container matColumnDef="select" *ngIf="isAdmin()">
+                <th mat-header-cell *matHeaderCellDef>
+                  <mat-checkbox 
+                    [checked]="allSelected()" 
+                    [indeterminate]="isIndeterminate()"
+                    (change)="toggleAllSelection()">
+                  </mat-checkbox>
+                </th>
+                <td mat-cell *matCellDef="let item">
+                  <mat-checkbox 
+                    [checked]="item.selected" 
+                    (change)="toggleItemSelection(item)">
+                  </mat-checkbox>
+                </td>
+              </ng-container>
+
+              <!-- Nombre Column - Solo para admins -->
+              <ng-container matColumnDef="name" *ngIf="isAdmin()">
+                <th mat-header-cell *matHeaderCellDef>Cliente</th>
+                <td mat-cell *matCellDef="let item">
+                  <div class="client-info">
+                    <div class="client-name">{{ item.user.firstName }} {{ item.user.lastName }}</div>
+                  </div>
+                </td>
+              </ng-container>
+
+              <!-- Tipo de Crédito Column - Solo para admins -->
+              <ng-container matColumnDef="creditType" *ngIf="isAdmin()">
+                <th mat-header-cell *matHeaderCellDef>Tipo de Crédito</th>
+                <td mat-cell *matCellDef="let item">{{ item.creditType }}</td>
+              </ng-container>
+
+              <!-- Fecha Inicio Column -->
+              <ng-container matColumnDef="startDate">
+                <th mat-header-cell *matHeaderCellDef>Fecha Inicio</th>
+                <td mat-cell *matCellDef="let item">{{ formatDate(item.startDate) }}</td>
+              </ng-container>
+
+              <!-- Fecha Fin Column -->
+              <ng-container matColumnDef="endDate">
+                <th mat-header-cell *matHeaderCellDef>Fecha Fin</th>
+                <td mat-cell *matCellDef="let item">{{ formatDate(item.endDate) }}</td>
+              </ng-container>
+
+              <!-- Estado Column -->
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef>Estado</th>
+                <td mat-cell *matCellDef="let item">
+                  <span class="status-badge" [class]="'status-' + item.status.toLowerCase().replace(' ', '-')">
+                    {{ item.status }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <!-- Cuota Column - Solo para usuarios normales -->
+              <ng-container matColumnDef="installmentAmount" *ngIf="!isAdmin()">
+                <th mat-header-cell *matHeaderCellDef>Cuota</th>
+                <td mat-cell *matCellDef="let item">{{ formatCurrency(item.installmentAmount) }}</td>
+              </ng-container>
+
+              <!-- Monto Adeudado Column -->
+              <ng-container matColumnDef="outstandingAmount">
+                <th mat-header-cell *matHeaderCellDef>Monto Adeudado</th>
+                <td mat-cell *matCellDef="let item">{{ formatCurrency(item.outstandingAmount) }}</td>
+              </ng-container>
+
+              <!-- Admin Fields - Cuotas Pendientes - Solo para admins -->
+              <ng-container matColumnDef="pendingInstallments" *ngIf="isAdmin()">
+                <th mat-header-cell *matHeaderCellDef>Cuotas Pendientes</th>
+                <td mat-cell *matCellDef="let item">{{ item.pendingInstallments }}</td>
+              </ng-container>
+
+              <!-- Admin Fields - Interés - Solo para admins -->
+              <ng-container matColumnDef="interestRate" *ngIf="isAdmin()">
+                <th mat-header-cell *matHeaderCellDef>Interés (%)</th>
+                <td mat-cell *matCellDef="let item">{{ formatPercentage(item.interestRate.rate) }}</td>
+              </ng-container>
+
+              <!-- Actions Column - Solo para admins -->
+              <ng-container matColumnDef="actions" *ngIf="isAdmin()">
+                <th mat-header-cell *matHeaderCellDef>Acciones</th>
+                <td mat-cell *matCellDef="let item">
+                  <div class="action-buttons-cell">
+                    <button mat-icon-button class="action-btn" matTooltip="Ver detalles" (click)="openViewDialog(item)">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button mat-icon-button class="action-btn" matTooltip="Editar" (click)="openEditDialog(item)">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                  </div>
+                </td>
+              </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </div>
+  </mat-card>
+</div>
+
+<!-- View Dialog Template -->
+<ng-template #viewDialogTpl>
+  <div class="dialog-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <h3 style="margin:0;">Detalle del Crédito</h3>
+    <button mat-icon-button (click)="cancelDialog()"><mat-icon>close</mat-icon></button>
+  </div>
+  <div class="dialog-content" style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
+    <div style="display:grid; grid-template-columns: 280px 1fr; gap:16px; align-items:start;">
+      <div style="border:1px solid #e0e0e0; border-radius:4px; padding:12px;">
+        <div style="font-weight:600; margin-bottom:8px;">Parámetros</div>
+        <table style="width:100%; border-collapse:collapse;">
+          <tr><td>Valor del préstamo</td><td style="text-align:right;">{{ formatCurrency(selectedDetail?.top?.loanAmount || 0) }}</td></tr>
+          <tr><td>TNA (30/360)</td><td style="text-align:right;">{{ formatPercentage(selectedDetail?.top?.tna30360 || 0) }}</td></tr>
+          <tr><td>Años</td><td style="text-align:right;">{{ selectedDetail?.top?.years || 0 }}</td></tr>
+          <tr><td>Frecuencia de Pago</td><td style="text-align:right;">{{ selectedDetail?.top?.paymentFrequency || '' }}</td></tr>
+          <tr><td>Interés equivalente</td><td style="text-align:right;">{{ formatPercentage(selectedDetail?.top?.equivalentInterest || 0) }}</td></tr>
+          <tr><td>N° de pagos por año</td><td style="text-align:right;">{{ selectedDetail?.top?.paymentsPerYear || 0 }}</td></tr>
+          <tr><td>N° Total de Cuotas</td><td style="text-align:right;">{{ selectedDetail?.top?.totalInstallments || 0 }}</td></tr>
+        </table>
+      </div>
+      <div style="border:1px solid #e0e0e0; border-radius:4px; padding:12px;">
+        <div style="font-weight:600; margin-bottom:8px;">Resumen</div>
+        <table style="width:100%; border-collapse:collapse;">
+          <tr><td>Valor préstamo</td><td style="text-align:right;">{{ formatCurrency(selectedDetail?.resumen?.loanAmount || 0) }}</td></tr>
+          <tr><td>Suma de Cuotas</td><td style="text-align:right;">{{ formatCurrency(selectedDetail?.resumen?.totalInstallmentsSum || 0) }}</td></tr>
+          <tr><td>Suma de Interés</td><td style="text-align:right;">{{ formatCurrency(selectedDetail?.resumen?.totalInterest || 0) }}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-weight:600; margin:8px 0;">Tabla de Amortización</div>
+      <table mat-table [dataSource]="selectedDetail?.table || []" class="credits-table" style="width:100%;">
+        <ng-container matColumnDef="installmentNumber">
+          <th mat-header-cell *matHeaderCellDef>Número de Cuota</th>
+          <td mat-cell *matCellDef="let r">{{ r.installmentNumber }}</td>
+        </ng-container>
+        <ng-container matColumnDef="installmentAmount">
+          <th mat-header-cell *matHeaderCellDef>CUOTA A PAGAR</th>
+          <td mat-cell *matCellDef="let r">{{ formatCurrency(r.installmentAmount) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="interest">
+          <th mat-header-cell *matHeaderCellDef>INTERÉS</th>
+          <td mat-cell *matCellDef="let r">{{ formatCurrency(r.interest) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="capitalAmortized">
+          <th mat-header-cell *matHeaderCellDef>CAPITAL AMORTIZADO</th>
+          <td mat-cell *matCellDef="let r">{{ formatCurrency(r.capitalAmortized) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="capitalAlive">
+          <th mat-header-cell *matHeaderCellDef>CAPITAL VIVO</th>
+          <td mat-cell *matCellDef="let r">{{ formatCurrency(r.capitalAlive) }}</td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="['installmentNumber','installmentAmount','interest','capitalAmortized','capitalAlive']"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['installmentNumber','installmentAmount','interest','capitalAmortized','capitalAlive']"></tr>
+      </table>
+    </div>
+  </div>
+  <div class="dialog-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+    <button mat-stroked-button (click)="cancelDialog()">Cerrar</button>
+  </div>
+</ng-template>
+
+<!-- Create/Edit Form Dialog Template -->
+<ng-template #formDialogTpl>
+  <div class="dialog-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <h3 style="margin:0;">{{ isEditMode ? 'Editar crédito' : 'Nuevo crédito' }}</h3>
+    <button mat-icon-button (click)="cancelDialog()"><mat-icon>close</mat-icon></button>
+  </div>
+  <div class="dialog-content" style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:end;">
+    <mat-form-field appearance="outline" style="grid-column: span 2;">
+      <mat-label>Tipo de crédito</mat-label>
+      <mat-select [(ngModel)]="editableCredit.creditType">
+        <mat-option value="Préstamo Personal">Préstamo Personal</mat-option>
+        <mat-option value="Línea de Crédito Empresarial">Línea de Crédito Empresarial</mat-option>
+        <mat-option value="Crédito Hipotecario">Crédito Hipotecario</mat-option>
+        <mat-option value="Tarjeta de Crédito">Tarjeta de Crédito</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Monto del préstamo</mat-label>
+      <input matInput type="number" [(ngModel)]="editableCredit.loanAmount" placeholder="0">
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Total de meses</mat-label>
+      <input matInput type="number" [(ngModel)]="editableCredit.totalMonths" placeholder="12">
+    </mat-form-field>
+  </div>
+  <div class="dialog-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+    <button mat-stroked-button (click)="cancelDialog()">Cancelar</button>
+    <button mat-raised-button color="primary" (click)="saveForm()">Guardar</button>
+  </div>
+</ng-template>
