@@ -115,50 +115,106 @@ export class Credits implements OnInit {
     return this.credits();
   }
 
+  /**
+   * Para qué sirve: Indica si la selección múltiple está en estado indeterminado.
+   * Recibe: Sin parámetros.
+   * Retorna: boolean.
+   * Ejemplo JSON: { "indeterminate": false }
+   */
   isIndeterminate() {
     // Implementar lógica de selección si es necesaria
     return false;
   }
 
+  /**
+   * Para qué sirve: Alterna la selección de todos los elementos.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   * Ejemplo JSON (estado): { "allSelected": true }
+   */
   toggleAllSelection() {
     // Implementar selección múltiple si es necesaria
     this.allSelected.update(v => !v);
   }
 
+  /**
+   * Para qué sirve: Alterna la selección de un crédito específico.
+   * Recibe: item: Credit.
+   * Retorna: void.
+   * Ejemplo JSON (entrada): { "id": 10 }
+   */
   toggleItemSelection(item: Credit) {
     // Implementar selección de elementos si es necesaria
     console.log('Toggle selection for item:', item.id);
   }
 
+  /**
+   * Para qué sirve: Actualiza el término de búsqueda a partir del input.
+   * Recibe: event: any (con target.value: string).
+   * Retorna: void.
+   * Ejemplo JSON (entrada): { "value": "hipotecario" }
+   */
   onSearchChange(event: any) {
     this.searchTerm.set(event.target.value);
   }
 
+  /**
+   * Para qué sirve: Ejecuta la búsqueda de créditos según el término actual.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   * Ejemplo JSON (criterio): { "term": "hipotecario" }
+   */
   searchCredits() {
     // Implement search logic
     console.log('Searching credits:', this.searchTerm());
   }
 
+  /**
+   * Para qué sirve: Muestra todos los créditos sin filtros.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   */
   viewAllCredits() {
     // Implement logic to view all credits
     console.log('View all credits');
   }
 
+  /**
+   * Para qué sirve: Abre el calendario de pagos del crédito.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   */
   viewCreditCalendar() {
     // Implement logic to view credit calendar
     console.log('View credit calendar');
   }
 
+  /**
+   * Para qué sirve: Busca créditos disponibles para solicitar.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   */
   searchAvailableCredits() {
     // Implement logic to search available credits
     console.log('Search available credits');
   }
 
+  /**
+   * Para qué sirve: Procesa acciones masivas sobre créditos seleccionados.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   */
   processCredit() {
     // Implementar lógica de procesamiento de créditos si es necesaria
     console.log('Processing credits...');
   }
 
+  /**
+   * Para qué sirve: Muestra u oculta columnas de administración.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   * Ejemplo JSON (estado): { "showAdminFields": true }
+   */
   toggleAdminFields() {
     this.showAdminFields.update(v => !v);
     if (this.showAdminFields()) {
@@ -168,6 +224,12 @@ export class Credits implements OnInit {
     }
   }
 
+  /**
+   * Para qué sirve: Formatea un número como moneda COP.
+   * Recibe: amount: number.
+   * Retorna: string.
+   * Ejemplo JSON (entrada): { "amount": 250000 } -> "$250.000"
+   */
   formatCurrency(amount: number): string {
     return new Intl.NumberFormat('es-ES', {
       style: 'currency',
@@ -176,11 +238,23 @@ export class Credits implements OnInit {
     }).format(amount);
   }
 
+  /**
+   * Para qué sirve: Formatea una fecha a 'es-ES'.
+   * Recibe: date: Date | string.
+   * Retorna: string.
+   * Ejemplo JSON (entrada): { "date": "2024-01-01" } -> "1/1/2024"
+   */
   formatDate(date: Date | string): string {
     const dateObj = typeof date === 'string' ? new Date(date) : date;
     return dateObj.toLocaleDateString('es-ES');
   }
 
+  /**
+   * Para qué sirve: Formatea un número como porcentaje.
+   * Recibe: value: number.
+   * Retorna: string.
+   * Ejemplo JSON (entrada): { "value": 15.6 } -> "15.6%"
+   */
   formatPercentage(value: number): string {
     return `${value}%`;
   }
@@ -198,6 +272,12 @@ export class Credits implements OnInit {
     this.loadCredits();
   }
 
+  /**
+   * Para qué sirve: Carga el usuario actual (mock en esta versión) y ajusta permisos.
+   * Recibe: Sin parámetros.
+   * Retorna: Promise<void>.
+   * Ejemplo JSON (usuario): { "id": 1, "role": { "name": "user" } }
+   */
   async loadCurrentUser() {
     try {
       // En una implementación real, esto vendría del servicio de autenticación
@@ -224,6 +304,12 @@ export class Credits implements OnInit {
     }
   }
 
+  /**
+   * Para qué sirve: Carga los créditos desde el backend según el rol del usuario.
+   * Recibe: Sin parámetros.
+   * Retorna: Promise<void>.
+   * Ejemplo JSON (respuesta parcial): [ { "id": 10, "creditType": "Hipotecario" } ]
+   */
   async loadCredits() {
     this.loading.set(true);
     try {
@@ -251,12 +337,23 @@ export class Credits implements OnInit {
   }
 
   // Método para cambiar entre admin y usuario normal (para testing)
+  /**
+   * Para qué sirve: Alterna el rol entre admin y usuario para pruebas.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   * Ejemplo JSON (estado): { "isAdmin": true }
+   */
   toggleUserRole() {
     this.isAdmin.update(v => !v);
     this.updateDisplayedColumns();
   }
 
   // Método para actualizar las columnas mostradas según el rol
+  /**
+   * Para qué sirve: Actualiza las columnas visibles en la tabla según el rol.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   */
   updateDisplayedColumns() {
     if (this.isAdmin()) {
       this.displayedColumns = ['select', 'name', 'creditType', 'startDate', 'endDate', 'status', 'actions'];
@@ -266,6 +363,11 @@ export class Credits implements OnInit {
   }
 
   // Método para logout
+  /**
+   * Para qué sirve: Ejecuta el flujo de cierre de sesión (placeholder).
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   */
   logout() {
     // Aquí se implementaría la lógica de logout
     console.log('Usuario deslogueado');
@@ -273,6 +375,12 @@ export class Credits implements OnInit {
   }
 
   // Dialog actions
+  /**
+   * Para qué sirve: Abre el diálogo de detalle de un crédito.
+   * Recibe: item: Credit.
+   * Retorna: void.
+   * Ejemplo JSON (entrada): { "id": 10 }
+   */
   openViewDialog(item: Credit) {
     this.selectedCredit = item as any; // Temporal cast
     this.selectedDetail = this.buildMockDetail(item as any);
@@ -284,6 +392,11 @@ export class Credits implements OnInit {
     }
   }
 
+  /**
+   * Para qué sirve: Abre el diálogo para crear un nuevo crédito.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   */
   openCreateDialog() {
     this.isEditMode = false;
     this.editableCredit = {
@@ -299,6 +412,12 @@ export class Credits implements OnInit {
     }
   }
 
+  /**
+   * Para qué sirve: Abre el diálogo para editar un crédito existente.
+   * Recibe: item: Credit.
+   * Retorna: void.
+   * Ejemplo JSON (entrada): { "id": 10, "status": "activo" }
+   */
   openEditDialog(item: Credit) {
     this.isEditMode = true;
     this.editableCredit = { ...item };
@@ -310,6 +429,12 @@ export class Credits implements OnInit {
     }
   }
 
+  /**
+   * Para qué sirve: Guarda el formulario de creación/edición y recarga la lista.
+   * Recibe: Sin parámetros (usa this.editableCredit).
+   * Retorna: Promise<void>.
+   * Ejemplo JSON (body crear): { "creditType": "Hipotecario", "loanAmount": 5000000 }
+   */
   async saveForm() {
     if (!this.editableCredit) return;
     
@@ -333,10 +458,21 @@ export class Credits implements OnInit {
     }
   }
 
+  /**
+   * Para qué sirve: Cierra cualquier diálogo abierto.
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   */
   cancelDialog() {
     this.dialog.closeAll();
   }
 
+  /**
+   * Para qué sirve: Construye datos de detalle simulados para la vista.
+   * Recibe: item: CreditItem.
+   * Retorna: CreditDetailViewModel.
+   * Ejemplo JSON (salida parcial): { "top": { "loanAmount": 5694200 } }
+   */
   private buildMockDetail(item: CreditItem): CreditDetailViewModel {
     // Demo data shaped like the provided screenshot
     const loanAmount = 5694200; // Valor del préstamo
