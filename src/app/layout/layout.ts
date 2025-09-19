@@ -24,6 +24,12 @@ import { RouterOutlet } from '@angular/router';
 export class Layout {
   sidebarCollapsed = signal(false);
 
+  /**
+   * Para qué sirve: Recibe el estado de colapso del sidebar y actualiza la señal.
+   * Recibe: collapsed: boolean.
+   * Retorna: void.
+   * Ejemplo JSON (entrada): { "collapsed": true }
+   */
   onSidebarToggle(collapsed: boolean) {
     this.sidebarCollapsed.set(collapsed);
   }

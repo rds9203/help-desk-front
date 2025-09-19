@@ -12,6 +12,11 @@ import { MatButtonModule } from '@angular/material/button';
 })
 export class Header {
   
+  /**
+   * Para qué sirve: Ejecuta el flujo de cierre de sesión (placeholder).
+   * Recibe: Sin parámetros.
+   * Retorna: void.
+   */
   logout() {
     // Aquí se implementaría la lógica de logout
     console.log('Usuario deslogueado');
