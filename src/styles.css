@@ -1,4 +1,51 @@
 /* You can add global styles to this file, and also import other style files */
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+html, body { 
+  height: 100%; 
+  margin: 0;
+  padding: 0;
+}
+
+body { 
+  margin: 0; 
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+  color: #333;
+  font-size: 14px;
+}
+
+/* Asegurar que todo el texto sea visible */
+* {
+  color: inherit;
+}
+
+/* Asegurar que los componentes de Material tengan colores visibles */
+.mat-mdc-card,
+.mat-mdc-table,
+.mat-mdc-form-field,
+.mat-mdc-button,
+mat-card,
+mat-table,
+mat-form-field,
+button {
+  color: #333 !important;
+}
+
+/* Mejorar visibilidad del header */
+mat-toolbar {
+  background-color: #3f51b5 !important;
+  color: white !important;
+}
+
+mat-toolbar * {
+  color: white !important;
+}
+
+/* Sidebar */
+mat-sidenav {
+  background-color: #2c3e50 !important;
+  color: white !important;
+}
+
+mat-sidenav * {
+  color: white !important;
+}

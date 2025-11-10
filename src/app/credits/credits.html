@@ -1,17 +1,54 @@
-<!-- Top Navigation Bar -->
-<div class="top-navbar">
+<!-- Main Content (Header y Sidebar manejados por MainLayout) -->
+<div class="credits-container">
   <div class="breadcrumbs">
     <span>Créditos</span>
   </div>
   
   <div class="user-info">
+    <!-- Información del usuario actual -->
+
+    <!-- Notificaciones para admins -->
+    <div *ngIf="isAdmin()" style="position: relative; margin-right: 16px;">
+      <button mat-icon-button 
+              color="primary" 
+              (click)="toggleNotifications()"
+              style="position: relative;">
+        <mat-icon>notifications</mat-icon>
+        <span *ngIf="unreadNotificationsCount() > 0" 
+              style="position: absolute; top: 8px; right: 8px; background: #f44336; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">
+          {{ unreadNotificationsCount() }}
+        </span>
+      </button>
+      
+      <!-- Dropdown de notificaciones -->
+      <div *ngIf="showNotifications()" 
+           style="position: absolute; top: 100%; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); z-index: 1000; min-width: 300px; max-width: 400px;">
+        <div style="padding: 16px; border-bottom: 1px solid #eee; font-weight: bold;">
+          Notificaciones
+        </div>
+        <div style="max-height: 300px; overflow-y: auto;">
+          <div *ngFor="let notification of notifications()" 
+               (click)="markNotificationAsRead(notification)"
+               [style.background]="!notification.isRead ? '#f0f8ff' : 'white'"
+               style="padding: 12px 16px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;">
+            <div style="font-weight: bold; margin-bottom: 4px;">{{ notification.title }}</div>
+            <div style="font-size: 14px; color: #666;">{{ notification.message }}</div>
+            <div style="font-size: 12px; color: #999; margin-top: 4px;">
+              {{ formatDate(notification.createdAt) }}
+            </div>
+          </div>
+          <div *ngIf="notifications().length === 0" style="padding: 16px; text-align: center; color: #666;">
+            No hay notificaciones
+          </div>
+        </div>
+        <div style="padding: 12px; text-align: center; border-top: 1px solid #eee;">
+          <button mat-button color="primary" style="font-size: 12px;">Ver todas</button>
+        </div>
+      </div>
+    </div>
+
     <button mat-raised-button color="primary" class="register-btn" (click)="openCreateDialog()">
       Nuevo Crédito
-    </button>
-    
-    <!-- Botón para cambiar rol (solo para testing) -->
-    <button mat-stroked-button color="accent" (click)="toggleUserRole()" style="margin-left: 8px;">
-      {{ isAdmin() ? 'Cambiar a Usuario' : 'Cambiar a Admin' }}
     </button>
   </div>
   
@@ -26,7 +63,7 @@
 </div>
 
 <!-- Main Content -->
-<div class="main-content">
+<div class="credits-main-content">
   <mat-card class="content-card">
     <!-- Action Buttons -->
     <div class="action-buttons" *ngIf="isAdmin()">
@@ -49,15 +86,15 @@
               <ng-container matColumnDef="select" *ngIf="isAdmin()">
                 <th mat-header-cell *matHeaderCellDef>
                   <mat-checkbox 
-                    [checked]="allSelected()" 
+                    [checked]="areAllCreditsSelected()" 
                     [indeterminate]="isIndeterminate()"
-                    (change)="toggleAllSelection()">
+                    (change)="toggleAllSelection($event.checked)">
                   </mat-checkbox>
                 </th>
                 <td mat-cell *matCellDef="let item">
                   <mat-checkbox 
-                    [checked]="item.selected" 
-                    (change)="toggleItemSelection(item)">
+                    [checked]="isCreditSelected(item)" 
+                    (change)="toggleItemSelection(item, $event.checked)">
                   </mat-checkbox>
                 </td>
               </ng-container>
@@ -100,6 +137,12 @@
                 </td>
               </ng-container>
 
+              <!-- Tipo de Crédito Column - Para usuarios normales -->
+              <ng-container matColumnDef="creditType" *ngIf="!isAdmin()">
+                <th mat-header-cell *matHeaderCellDef>Tipo de Crédito</th>
+                <td mat-cell *matCellDef="let item">{{ item.creditType }}</td>
+              </ng-container>
+
               <!-- Cuota Column - Solo para usuarios normales -->
               <ng-container matColumnDef="installmentAmount" *ngIf="!isAdmin()">
                 <th mat-header-cell *matHeaderCellDef>Cuota</th>
@@ -124,16 +167,40 @@
                 <td mat-cell *matCellDef="let item">{{ formatPercentage(item.interestRate.rate) }}</td>
               </ng-container>
 
-              <!-- Actions Column - Solo para admins -->
-              <ng-container matColumnDef="actions" *ngIf="isAdmin()">
+              <!-- Actions Column -->
+              <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef>Acciones</th>
                 <td mat-cell *matCellDef="let item">
                   <div class="action-buttons-cell">
                     <button mat-icon-button class="action-btn" matTooltip="Ver detalles" (click)="openViewDialog(item)">
                       <mat-icon>visibility</mat-icon>
                     </button>
-                    <button mat-icon-button class="action-btn" matTooltip="Editar" (click)="openEditDialog(item)">
-                      <mat-icon>edit</mat-icon>
+                    <!-- Botones solo para admins -->
+                    <button *ngIf="isAdmin() && item.status === 'ACTIVO'" mat-icon-button class="action-btn" matTooltip="Pagar cuotas" (click)="openPayDialog(item)">
+                      <mat-icon>paid</mat-icon>
+                    </button>
+                    <!-- Botones de aprobación solo para créditos pendientes y admins -->
+                    <button *ngIf="isAdmin() && item.status === 'PENDIENTE_APROBACION'" 
+                            mat-icon-button class="action-btn" 
+                            matTooltip="Aprobar" 
+                            color="primary"
+                            (click)="approveCredit(item)">
+                      <mat-icon>check_circle</mat-icon>
+                    </button>
+                    <button *ngIf="isAdmin() && item.status === 'PENDIENTE_APROBACION'" 
+                            mat-icon-button class="action-btn" 
+                            matTooltip="Rechazar" 
+                            color="warn"
+                            (click)="rejectCredit(item)">
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                    <!-- Botón cancelar para usuarios (no admins) con créditos pendientes -->
+                    <button *ngIf="!isAdmin() && item.status === 'PENDIENTE_APROBACION'" 
+                            mat-icon-button class="action-btn" 
+                            matTooltip="Cancelar crédito" 
+                            color="warn"
+                            (click)="cancelCredit(item)">
+                      <mat-icon>delete</mat-icon>
                     </button>
                   </div>
                 </td>
@@ -152,57 +219,70 @@
     <h3 style="margin:0;">Detalle del Crédito</h3>
     <button mat-icon-button (click)="cancelDialog()"><mat-icon>close</mat-icon></button>
   </div>
-  <div class="dialog-content" style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
-    <div style="display:grid; grid-template-columns: 280px 1fr; gap:16px; align-items:start;">
-      <div style="border:1px solid #e0e0e0; border-radius:4px; padding:12px;">
-        <div style="font-weight:600; margin-bottom:8px;">Parámetros</div>
-        <table style="width:100%; border-collapse:collapse;">
-          <tr><td>Valor del préstamo</td><td style="text-align:right;">{{ formatCurrency(selectedDetail?.top?.loanAmount || 0) }}</td></tr>
-          <tr><td>TNA (30/360)</td><td style="text-align:right;">{{ formatPercentage(selectedDetail?.top?.tna30360 || 0) }}</td></tr>
-          <tr><td>Años</td><td style="text-align:right;">{{ selectedDetail?.top?.years || 0 }}</td></tr>
-          <tr><td>Frecuencia de Pago</td><td style="text-align:right;">{{ selectedDetail?.top?.paymentFrequency || '' }}</td></tr>
-          <tr><td>Interés equivalente</td><td style="text-align:right;">{{ formatPercentage(selectedDetail?.top?.equivalentInterest || 0) }}</td></tr>
-          <tr><td>N° de pagos por año</td><td style="text-align:right;">{{ selectedDetail?.top?.paymentsPerYear || 0 }}</td></tr>
-          <tr><td>N° Total de Cuotas</td><td style="text-align:right;">{{ selectedDetail?.top?.totalInstallments || 0 }}</td></tr>
-        </table>
+  <div class="dialog-content scrollable-dialog-content" style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
+    <div *ngIf="isAdmin() && showPayControls()" class="pay-controls">
+      <div class="pay-controls-row">
+        <button mat-button (click)="toggleSelectAllInstallments(true)" [disabled]="areAllInstallmentsSelected()">Seleccionar todos</button>
+        <button mat-button (click)="clearInstallmentSelection()">Quitar selección</button>
       </div>
-      <div style="border:1px solid #e0e0e0; border-radius:4px; padding:12px;">
-        <div style="font-weight:600; margin-bottom:8px;">Resumen</div>
-        <table style="width:100%; border-collapse:collapse;">
-          <tr><td>Valor préstamo</td><td style="text-align:right;">{{ formatCurrency(selectedDetail?.resumen?.loanAmount || 0) }}</td></tr>
-          <tr><td>Suma de Cuotas</td><td style="text-align:right;">{{ formatCurrency(selectedDetail?.resumen?.totalInstallmentsSum || 0) }}</td></tr>
-          <tr><td>Suma de Interés</td><td style="text-align:right;">{{ formatCurrency(selectedDetail?.resumen?.totalInterest || 0) }}</td></tr>
-        </table>
+      <div class="pay-controls-row">
+        <button mat-raised-button color="primary"
+                [disabled]="selectedInstallments().length === 0"
+                (click)="paySelectedInstallments()">
+          Pagar cuota
+        </button>
       </div>
     </div>
 
     <div>
       <div style="font-weight:600; margin:8px 0;">Tabla de Amortización</div>
-      <table mat-table [dataSource]="selectedDetail?.table || []" class="credits-table" style="width:100%;">
-        <ng-container matColumnDef="installmentNumber">
-          <th mat-header-cell *matHeaderCellDef>Número de Cuota</th>
-          <td mat-cell *matCellDef="let r">{{ r.installmentNumber }}</td>
-        </ng-container>
-        <ng-container matColumnDef="installmentAmount">
-          <th mat-header-cell *matHeaderCellDef>CUOTA A PAGAR</th>
-          <td mat-cell *matCellDef="let r">{{ formatCurrency(r.installmentAmount) }}</td>
-        </ng-container>
-        <ng-container matColumnDef="interest">
-          <th mat-header-cell *matHeaderCellDef>INTERÉS</th>
-          <td mat-cell *matCellDef="let r">{{ formatCurrency(r.interest) }}</td>
-        </ng-container>
-        <ng-container matColumnDef="capitalAmortized">
-          <th mat-header-cell *matHeaderCellDef>CAPITAL AMORTIZADO</th>
-          <td mat-cell *matCellDef="let r">{{ formatCurrency(r.capitalAmortized) }}</td>
-        </ng-container>
-        <ng-container matColumnDef="capitalAlive">
-          <th mat-header-cell *matHeaderCellDef>CAPITAL VIVO</th>
-          <td mat-cell *matCellDef="let r">{{ formatCurrency(r.capitalAlive) }}</td>
-        </ng-container>
+      <div class="amortization-scroll">
+        <table mat-table [dataSource]="selectedDetail?.table || []" class="credits-table amortization-table">
+          <ng-container matColumnDef="installmentSelect" *ngIf="isAdmin()">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox
+                [checked]="areAllInstallmentsSelected()"
+                [indeterminate]="selectedInstallments().length > 0 && !areAllInstallmentsSelected()"
+                (change)="toggleSelectAllInstallments($event.checked)">
+              </mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let r">
+              <mat-checkbox
+                [disabled]="!isInstallmentSelectable(r)"
+                [checked]="isInstallmentSelected(r)"
+                (change)="toggleInstallmentSelection(r, $event.checked)">
+              </mat-checkbox>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="installmentNumber">
+            <th mat-header-cell *matHeaderCellDef>Número de Cuota</th>
+            <td mat-cell *matCellDef="let r">{{ r.installmentNumber }}</td>
+          </ng-container>
+          <ng-container matColumnDef="installmentStatus">
+            <th mat-header-cell *matHeaderCellDef>Estado de cuota</th>
+            <td mat-cell *matCellDef="let r">{{ r.status === 'PAGADO' ? 'Pagado' : 'Pendiente' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="installmentAmount">
+            <th mat-header-cell *matHeaderCellDef>CUOTA A PAGAR</th>
+            <td mat-cell *matCellDef="let r">{{ formatCurrency(r.installmentAmount) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="interest">
+            <th mat-header-cell *matHeaderCellDef>INTERÉS</th>
+            <td mat-cell *matCellDef="let r">{{ formatCurrency(r.interest) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="capitalAmortized">
+            <th mat-header-cell *matHeaderCellDef>CAPITAL AMORTIZADO</th>
+            <td mat-cell *matCellDef="let r">{{ formatCurrency(r.capitalAmortized) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="capitalAlive">
+            <th mat-header-cell *matHeaderCellDef>CAPITAL VIVO</th>
+            <td mat-cell *matCellDef="let r">{{ formatCurrency(r.capitalAlive) }}</td>
+          </ng-container>
 
-        <tr mat-header-row *matHeaderRowDef="['installmentNumber','installmentAmount','interest','capitalAmortized','capitalAlive']"></tr>
-        <tr mat-row *matRowDef="let row; columns: ['installmentNumber','installmentAmount','interest','capitalAmortized','capitalAlive']"></tr>
-      </table>
+          <tr mat-header-row *matHeaderRowDef="detailColumns(); sticky: true"></tr>
+          <tr mat-row *matRowDef="let row; columns: detailColumns();" [class.current-installment]="isCurrentInstallment(row)" [class.paid-installment]="row.status === 'PAGADO' && row.installmentNumber > 0"></tr>
+        </table>
+      </div>
     </div>
   </div>
   <div class="dialog-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
@@ -238,5 +318,246 @@
   <div class="dialog-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
     <button mat-stroked-button (click)="cancelDialog()">Cancelar</button>
     <button mat-raised-button color="primary" (click)="saveForm()">Guardar</button>
+  </div>
+</ng-template>
+
+<!-- New Credit Dialog Template -->
+<ng-template #newCreditDialogTpl>
+  <div class="dialog-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <h3 style="margin:0;">Nuevo Crédito</h3>
+    <button mat-icon-button (click)="cancelDialog()"><mat-icon>close</mat-icon></button>
+  </div>
+  
+  <div class="dialog-content" style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
+    <!-- Información del usuario y crédito máximo -->
+    <div *ngIf="maxCreditInfo" style="background-color: #f5f5f5; padding: 16px; border-radius: 8px; border-left: 4px solid #2196F3;">
+      <h4 style="margin: 0 0 8px 0; color: #2196F3;">Información de Crédito Máximo</h4>
+      <p style="margin: 4px 0;"><strong>Usuario:</strong> {{ maxCreditInfo.userName }}</p>
+      <p style="margin: 4px 0;"><strong>Salario:</strong> {{ formatCurrency(maxCreditInfo.salary) }}</p>
+      <p style="margin: 4px 0;"><strong>Meses en la empresa:</strong> {{ maxCreditInfo.monthsWorked }}</p>
+      <p style="margin: 4px 0;"><strong>Tiene deuda actual:</strong> {{ maxCreditInfo.hasDebt ? 'Sí' : 'No' }}</p>
+      <p style="margin: 4px 0; font-size: 18px; font-weight: bold; color: #4CAF50;">
+        <strong>Crédito máximo disponible:</strong> {{ formatCurrency(maxCreditInfo.maxCredit) }}
+      </p>
+    </div>
+    
+    <!-- Información del usuario si no hay maxCreditInfo -->
+    <div *ngIf="!maxCreditInfo && currentUser()" style="background-color: #f5f5f5; padding: 16px; border-radius: 8px; border-left: 4px solid #2196F3;">
+      <h4 style="margin: 0 0 8px 0; color: #2196F3;">Información Financiera</h4>
+      <p style="margin: 4px 0;"><strong>Usuario:</strong> {{ currentUser()?.firstName }} {{ currentUser()?.lastName }}</p>
+      <p style="margin: 4px 0;"><strong>Salario:</strong> {{ formatCurrency(currentUser()?.salary || 0) }}</p>
+      
+      <!-- Calcular antigüedad en la empresa -->
+      <ng-container *ngIf="currentUser()?.startDate">
+        <p style="margin: 4px 0;">
+          <strong>Antigüedad:</strong> 
+          {{ calculateYearsWorked(currentUser()?.startDate!) }} años
+        </p>
+      </ng-container>
+      
+      <!-- Mostrar información de créditos activos (no pendientes) -->
+      <p style="margin: 4px 0;">
+        <strong>Créditos activos:</strong> 
+        {{ getApprovedCreditsCount() }}
+      </p>
+      
+      <!-- Solo mostrar deuda si tiene créditos aprobados y activos -->
+      <ng-container *ngIf="hasApprovedAndActiveDebt()">
+        <p style="margin: 4px 0;">
+          <strong>Monto de deuda actual:</strong> 
+          {{ formatCurrency(getApprovedDebtAmount()) }}
+        </p>
+        <p style="margin: 4px 0;">
+          <strong>Pagado hasta ahora:</strong> 
+          {{ formatCurrency(getPaidAmount()) }}
+        </p>
+      </ng-container>
+      
+      <!-- Información sobre créditos activos -->
+      <p *ngIf="getApprovedCreditsCount() > 0" style="margin: 4px 0; color: #4CAF50;">
+        <strong>Créditos activos:</strong> {{ getApprovedCreditsCount() }}
+      </p>
+      
+      <!-- Mostrar información de deuda activa -->
+      <p *ngIf="hasApprovedAndActiveDebt()" style="margin: 4px 0; color: #FF9800;">
+        <strong>Deuda activa total:</strong> {{ formatCurrency(getApprovedDebtAmount()) }}
+      </p>
+      
+      <!-- Información sobre créditos pendientes -->
+      <p *ngIf="getPendingCreditsCount() > 0" style="margin: 4px 0; color: #FF9800;">
+        <strong>Créditos pendientes de aprobación:</strong> {{ getPendingCreditsCount() }}
+      </p>
+      
+      <!-- Mostrar crédito máximo disponible con información detallada -->
+      <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; margin-top: 8px;">
+        <p style="margin: 4px 0; font-size: 16px; font-weight: bold; color: #1976d2;">
+          <strong>Crédito máximo disponible:</strong> 
+          {{ formatCurrency(calculateMaxCredit()) }}
+        </p>
+        <p *ngIf="currentUser()?.startDate && calculateYearsWorked(currentUser()!.startDate!) < 1" style="margin: 4px 0; font-size: 12px; color: #1976d2;">
+          (Menos de 1 año en la empresa: 1x salario)
+        </p>
+        <p *ngIf="currentUser()?.startDate && calculateYearsWorked(currentUser()!.startDate!) >= 1" style="margin: 4px 0; font-size: 12px; color: #1976d2;">
+          (1 año o más en la empresa: 2x salario)
+        </p>
+        <p *ngIf="getApprovedCreditsCount() > 0" style="margin: 4px 0; font-size: 12px; color: #FF5722;">
+          (Descontando {{ getApprovedCreditsCount() }} crédito(s) activo(s))
+        </p>
+      </div>
+    </div>
+
+    <!-- Formulario de nuevo crédito -->
+    <div style="display: grid; gap: 16px;">
+      <mat-form-field appearance="outline">
+        <mat-label>¿Cuánto desea prestar?</mat-label>
+        <input matInput 
+               type="number" 
+               [(ngModel)]="newCreditForm.loanAmount" 
+               [max]="maxCreditInfo?.maxCredit || 0"
+               min="0"
+               step="1000"
+               (input)="validateLoanAmount()"
+               placeholder="0">
+        <mat-hint *ngIf="maxCreditInfo">
+          Máximo: {{ formatCurrency(maxCreditInfo.maxCredit) }}
+        </mat-hint>
+        <mat-error *ngIf="newCreditForm.loanAmount > (maxCreditInfo?.maxCredit || 0)">
+          El monto no puede exceder {{ formatCurrency(maxCreditInfo?.maxCredit || 0) }}
+        </mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Número de cuotas</mat-label>
+        <mat-select [(ngModel)]="newCreditForm.installments">
+          <mat-option value="6">6 cuotas</mat-option>
+          <mat-option value="12">12 cuotas</mat-option>
+          <mat-option value="18">18 cuotas</mat-option>
+          <mat-option value="24">24 cuotas</mat-option>
+          <mat-option value="36">36 cuotas</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Resumen del crédito -->
+      <div *ngIf="newCreditForm.loanAmount > 0 && newCreditForm.installments && newCreditForm.installments > 0" style="background-color: #e8f5e8; padding: 16px; border-radius: 8px; border-left: 4px solid #4CAF50;">
+        <h4 style="margin: 0 0 8px 0; color: #2E7D32;">Resumen del Crédito</h4>
+        <p style="margin: 4px 0;"><strong>Monto solicitado:</strong> {{ formatCurrency(newCreditForm.loanAmount) }}</p>
+        <p style="margin: 4px 0;"><strong>Cuotas:</strong> {{ newCreditForm.installments }}</p>
+        <p style="margin: 4px 0; font-size: 16px; font-weight: bold;">
+          <strong>Cuota mensual aproximada:</strong> {{ formatCurrency(newCreditForm.loanAmount / newCreditForm.installments) }}
+        </p>
+      </div>
+
+      <!-- Mensaje de error si excede el máximo -->
+      <div *ngIf="newCreditForm.loanAmount > 0 && maxCreditInfo && newCreditForm.loanAmount > maxCreditInfo.maxCredit" style="background-color: #ffebee; padding: 16px; border-radius: 8px; border-left: 4px solid #f44336;">
+        <h4 style="margin: 0 0 8px 0; color: #c62828;">⚠️ Monto Excede el Límite</h4>
+        <p style="margin: 4px 0; color: #c62828;">
+          El monto solicitado ({{ formatCurrency(newCreditForm.loanAmount) }}) excede su crédito máximo disponible ({{ formatCurrency(maxCreditInfo.maxCredit) }}).
+        </p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="dialog-actions" style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+    <button mat-stroked-button (click)="cancelDialog()">Cancelar</button>
+    <button mat-raised-button 
+            color="primary" 
+            [disabled]="!newCreditForm.loanAmount || !newCreditForm.installments || newCreditForm.loanAmount <= 0 || newCreditForm.installments <= 0 || (maxCreditInfo && newCreditForm.loanAmount > maxCreditInfo.maxCredit)"
+            (click)="generateAuthorization()">
+      Continuar
+    </button>
+  </div>
+</ng-template>
+
+<!-- Authorization Document Dialog Template -->
+<ng-template #authorizationDialogTpl>
+  <div class="dialog-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <h3 style="margin:0;">Autorización de Descuentos</h3>
+    <button mat-icon-button (click)="cancelDialog()"><mat-icon>close</mat-icon></button>
+  </div>
+  
+  <div class="dialog-content" style="margin-top:16px; max-height: 70vh; overflow-y: auto;">
+    <div *ngIf="authorizationDocument" style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <!-- Header del documento -->
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h2 style="margin: 0; font-size: 18px; font-weight: bold;">{{ authorizationDocument.documentType }}</h2>
+        <p style="margin: 10px 0 0 0; font-size: 14px;"><strong>Fecha:</strong> {{ authorizationDocument.date }}</p>
+      </div>
+
+      <!-- Información del empleado -->
+      <div style="margin-bottom: 20px;">
+        <p><strong>Señores</strong></p>
+        <p><strong>{{ authorizationDocument.companyName }}</strong></p>
+        <p>Ciudad</p>
+        <br>
+        <p><strong>Valor Préstamo o Anticipo:</strong> {{ formatCurrency(authorizationDocument.loanAmount) }}</p>
+        <p><strong>Nombres y Apellidos completos del Colaborador:</strong> {{ authorizationDocument.employeeName }}</p>
+        <p><strong>cc.</strong> {{ authorizationDocument.employeeId }}</p>
+      </div>
+
+      <!-- Cuerpo del documento -->
+      <div style="margin-bottom: 20px;">
+        <p><strong>Constancia Recibo y Autorización,</strong></p>
+        <p>Por medio del presente documento, autorizo expresamente a la empresa {{ authorizationDocument.companyName }}, para que se me descuente de mis salarios la suma de {{ authorizationDocument.loanAmountWords }} PESOS ({{ formatCurrency(authorizationDocument.loanAmount) }}), por concepto de préstamo sobre mi salario, los cuales fueron solicitados por mí y que declaro haber recibido de {{ authorizationDocument.companyName.toUpperCase() }} y que pagaré incondicionalmente de la siguiente forma y hasta la cancelación total:</p>
+        
+        <p><strong>{{ authorizationDocument.installmentWords }} ({{ authorizationDocument.totalInstallments }}) Cuota(s) que serán descontadas de mi nómina</strong></p>
+      </div>
+
+      <!-- Tabla de Amortización -->
+      <div style="margin-bottom: 20px;">
+        <p style="font-weight: bold; margin-bottom: 10px;">Tabla de Amortización</p>
+        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
+          <thead>
+            <tr style="background-color: #e8f5e9;">
+              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Cuota #</th>
+              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Cuota a Pagar</th>
+              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Interés</th>
+              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Capital Amortizado</th>
+              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Capital Vivo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of authorizationDocument.amortizationTable">
+              <td style="border: 1px solid #000; padding: 8px; text-align: center;">{{ row.installment }}</td>
+              <td style="border: 1px solid #000; padding: 8px; text-align: right;">{{ formatCurrency(row.payment) }}</td>
+              <td style="border: 1px solid #000; padding: 8px; text-align: right;">{{ formatCurrency(row.interest) }}</td>
+              <td style="border: 1px solid #000; padding: 8px; text-align: right;">{{ formatCurrency(row.principal) }}</td>
+              <td style="border: 1px solid #000; padding: 8px; text-align: right;">{{ formatCurrency(row.balance) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Términos y condiciones -->
+      <div style="margin-bottom: 20px;">
+        <p>Así mismo, autorizo expresamente al Empleador / Empresa para que retenga y cobre de mi liquidación final de Prestaciones Sociales, salarios, vacaciones y eventuales indemnizaciones, los saldos insolutos de la obligación contraída, en el evento de que llegase a finalizar mi contrato de trabajo antes de completar el pago total de esta obligación adquirida.</p>
+        <p><strong>Autorizo deducción,</strong></p>
+      </div>
+
+      <!-- Espacios para firmas -->
+      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+        <div style="text-align: center;">
+          <p>_________________________</p>
+          <p><strong>Firma del Empleado</strong></p>
+        </div>
+        <div style="text-align: center;">
+          <p>_________________________</p>
+          <p><strong>Firma del Empleador</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+    <div class="dialog-actions" style="display:flex; justify-content:space-between; gap:8px; margin-top:16px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <mat-checkbox [(ngModel)]="acceptTermsChecked"></mat-checkbox>
+      <label>Acepto los términos y condiciones</label>
+    </div>
+    <div>
+      <button mat-stroked-button (click)="cancelDialog()">Cancelar</button>
+      <button mat-raised-button 
+              color="primary" 
+              [disabled]="!acceptTermsChecked"
+              (click)="acceptAuthorization()">Aceptar</button>
+    </div>
   </div>
 </ng-template>

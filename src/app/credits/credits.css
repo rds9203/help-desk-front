@@ -1,28 +1,13 @@
-/* Top Navigation Bar */
-.top-navbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 0;
+/* Credits Container */
+.credits-container {
+  display: block;
+  padding: 24px;
 }
 
-.breadcrumbs {
-  font-size: 18px;
-  font-weight: 500;
-  color: #333;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.username {
-  font-weight: 500;
+/* Main Content */
+.credits-main-content {
+  padding: 0;
+  font-family: 'Roboto', sans-serif;
   color: #333;
 }
 
@@ -33,15 +18,11 @@
 
 .global-search {
   min-width: 250px;
+  padding: 16px;
 }
 
 .search-field {
   width: 100%;
-}
-
-/* Main Content */
-.main-content {
-  padding: 0;
 }
 
 .content-card {
@@ -82,13 +63,16 @@
 .credits-table th {
   background-color: #f8f9fa;
   font-weight: 600;
-  color: #333;
+  color: #333 !important;
   border-bottom: 2px solid #e0e0e0;
+  font-size: 14px !important;
 }
 
 .credits-table td {
   border-bottom: 1px solid #f0f0f0;
   padding: 12px 8px;
+  color: #333 !important;
+  font-size: 14px !important;
 }
 
 .credits-table tr:hover {
@@ -103,7 +87,8 @@
 
 .client-name {
   font-weight: 500;
-  color: #333;
+  color: #333 !important;
+  font-size: 14px;
 }
 
 /* Status Badges */
@@ -140,6 +125,57 @@
 .action-buttons-cell button {
   min-width: 40px;
   height: 40px;
+}
+
+.amortization-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.amortization-table .current-installment {
+  background-color: #e3f2fd;
+  font-weight: 600;
+}
+
+.amortization-table .current-installment td {
+  border-top: 2px solid #1976d2;
+}
+
+.amortization-table .paid-installment {
+  background-color: #f5f5f5;
+  color: #777;
+  font-style: italic;
+}
+
+.scrollable-dialog-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.pay-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fafafa;
+  margin-bottom: 8px;
+}
+
+.pay-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pay-info {
+  font-size: 12px;
+  color: #c62828;
 }
 
 
