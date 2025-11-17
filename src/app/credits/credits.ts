@@ -744,22 +744,18 @@ export class Credits implements OnInit {
     
     // Validar que las cuotas estén llenas
     if (!this.newCreditForm.installments || this.newCreditForm.installments <= 0) {
-      alert('⚠️ Debe seleccionar el número de cuotas.');
+      alert('⚠️ Debe ingresar el número de cuotas (meses).');
       return;
     }
     
     // Convertir a número si viene como string
     const installments = typeof this.newCreditForm.installments === 'string' 
       ? parseInt(this.newCreditForm.installments, 10) 
-      : this.newCreditForm.installments;
+      : Number(this.newCreditForm.installments);
     
-    // Validar que sea un número de cuotas válido
-    const validInstallments = [6, 12, 18, 24, 36];
-    console.log('🔍 Debug - installments después de conversión:', installments);
-    console.log('🔍 Debug - incluye en válidos?:', validInstallments.includes(installments));
-    
-    if (!installments || !validInstallments.includes(installments)) {
-      alert('⚠️ Debe seleccionar un número de cuotas válido (6, 12, 18, 24 o 36). Valor recibido: ' + installments);
+    // Validar que sea un número de cuotas válido (entre 1 y 36 meses)
+    if (Number.isNaN(installments) || installments < 1 || installments > 36) {
+      alert('⚠️ El número de cuotas debe estar entre 1 y 36 meses. Valor ingresado: ' + this.newCreditForm.installments);
       return;
     }
     
@@ -767,17 +763,18 @@ export class Credits implements OnInit {
     this.newCreditForm.installments = installments;
     
     // Validar que el monto no exceda el límite
-    if (this.maxCreditInfo && this.newCreditForm.loanAmount > this.maxCreditInfo.maxCredit) {
-      alert(`⚠️ Error: El monto solicitado (${this.formatCurrency(this.newCreditForm.loanAmount)}) excede su crédito máximo disponible (${this.formatCurrency(this.maxCreditInfo.maxCredit)}).`);
-      return;
-    }
+    // (Removido) La validación se hará en el backend para permitir consolidación de deudas
+    // if (this.maxCreditInfo && this.newCreditForm.loanAmount > this.maxCreditInfo.maxCredit) {
+    //   alert(`⚠️ Error: El monto solicitado (${this.formatCurrency(this.newCreditForm.loanAmount)}) excede su crédito máximo disponible (${this.formatCurrency(this.maxCreditInfo.maxCredit)}).`);
+    //   return;
+    // }
     
-    // Si no hay maxCreditInfo, calcular el límite manualmente
-    const calculatedMaxCredit = this.calculateMaxCredit();
-    if (this.newCreditForm.loanAmount > calculatedMaxCredit) {
-      alert(`⚠️ Error: El monto solicitado (${this.formatCurrency(this.newCreditForm.loanAmount)}) excede su crédito máximo disponible (${this.formatCurrency(calculatedMaxCredit)}).`);
-      return;
-    }
+    // Si no hay maxCreditInfo, calcular el límite manualmente (Removido por consolidación)
+    // const calculatedMaxCredit = this.calculateMaxCredit();
+    // if (this.newCreditForm.loanAmount > calculatedMaxCredit) {
+    //   alert(`⚠️ Error: El monto solicitado (${this.formatCurrency(this.newCreditForm.loanAmount)}) excede su crédito máximo disponible (${this.formatCurrency(calculatedMaxCredit)}).`);
+    //   return;
+    // }
     
     // Generar documento de autorización con datos del usuario actual
     const today = new Date();
@@ -845,12 +842,12 @@ export class Credits implements OnInit {
     this.authorizationDocument = {
       date: formattedDate,
       companyName: 'Sectorial S.A.S',
-      city: 'Bogotá',
-      documentType: 'Autorización de Descuentos por Nómina',
+      city: 'Medellin',
+      documentType: 'Autorización de Descuentos sobre Salarios y Prestaciones / Apoyo Económico',
       loanAmount: this.newCreditForm.loanAmount,
       loanAmountWords: this.numberToWords(this.newCreditForm.loanAmount),
       employeeName: `${currentUser.firstName} ${currentUser.lastName}`,
-      employeeId: '1.007.286.964', // ID genérico
+      employeeId: currentUser.documentNumber || currentUser.id, // usar cc si existe
       totalInstallments: this.newCreditForm.installments,
       installments: this.newCreditForm.installments,
       installmentAmount: Math.round(monthlyPayment),
@@ -913,12 +910,8 @@ export class Credits implements OnInit {
    * @returns void
    */
   validateLoanAmount() {
-    // Validar solo si hay maxCreditInfo y el monto es válido
-    if (this.maxCreditInfo && this.newCreditForm.loanAmount > 0) {
-      if (this.newCreditForm.loanAmount > this.maxCreditInfo.maxCredit) {
-        alert(`⚠️ El monto solicitado (${this.formatCurrency(this.newCreditForm.loanAmount)}) excede su crédito máximo disponible (${this.formatCurrency(this.maxCreditInfo.maxCredit)}).`);
-      }
-    }
+    // Validación informativa deshabilitada; el backend consolidará y devolverá el resultado correcto
+    return;
   }
 
   /**
@@ -1076,6 +1069,34 @@ export class Credits implements OnInit {
   }
 
   /**
+   * Calcula la cuota mensual usando la fórmula de amortización
+   * Fórmula: Cuota = r * P / (1 - (1 + r)^-n)
+   * Donde: r = tasa de interés mensual (1.3% = 0.013), P = monto del préstamo, n = número de meses
+   */
+  calculateMonthlyPayment(loanAmount: number, installments: number): number {
+    if (!loanAmount || !installments || loanAmount <= 0 || installments <= 0) {
+      return 0;
+    }
+
+    const monthlyRate = 0.013; // 1.3% mensual
+    const P = loanAmount;
+    const n = installments;
+    const r = monthlyRate;
+
+    // Fórmula de amortización: Cuota = r * P / (1 - (1 + r)^-n)
+    const numerator = r * P;
+    const denominator = 1 - Math.pow(1 + r, -n);
+    
+    if (denominator === 0) {
+      // Si el denominador es 0, retornar simplemente la división (sin interés)
+      return P / n;
+    }
+
+    const monthlyPayment = numerator / denominator;
+    return Math.round(monthlyPayment * 100) / 100; // Redondear a 2 decimales
+  }
+
+  /**
    * Calcula el crédito máximo disponible según antigüedad
    */
   calculateMaxCredit(): number {
@@ -1089,15 +1110,9 @@ export class Credits implements OnInit {
       return 0;
     }
 
-    const yearsWorked = this.calculateYearsWorked(user.startDate);
-    console.log('🔍 Debug calculateMaxCredit - años trabajados:', yearsWorked);
-    
-    // Si lleva menos de 1 año: presta 1x su salario
-    // Si lleva 1 año o más: presta 2x su salario
-    const multiplier = yearsWorked >= 1 ? 2 : 1;
-    const maxCredit = user.salary * multiplier;
-    console.log('🔍 Debug calculateMaxCredit - multiplier:', multiplier);
-    console.log('🔍 Debug calculateMaxCredit - maxCredit base:', maxCredit);
+    // Cualquier persona puede prestar el doble de lo que gana
+    const maxCredit = user.salary * 2;
+    console.log('🔍 Debug calculateMaxCredit - maxCredit base (2x salario):', maxCredit);
     
     // Descontar SOLO créditos activos (ACTIVO, APROBADO) - estos ya están siendo pagados
     const activeCredits = this.credits().filter(c => c.status === 'ACTIVO' || c.status === 'APROBADO');
@@ -1344,7 +1359,7 @@ export class Credits implements OnInit {
         }
 
         balance = Math.max(0, balance - capitalAmortized);
-        const status = paidSet.has(n) || balance <= 0.01 ? 'PAGADO' : 'PENDIENTE';
+        const status = paidSet.has(n) ? 'PAGADO' : 'PENDIENTE';
         rows.push({
           installmentNumber: n,
           installmentAmount,

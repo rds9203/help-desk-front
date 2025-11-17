@@ -394,11 +394,8 @@
           <strong>Crédito máximo disponible:</strong> 
           {{ formatCurrency(calculateMaxCredit()) }}
         </p>
-        <p *ngIf="currentUser()?.startDate && calculateYearsWorked(currentUser()!.startDate!) < 1" style="margin: 4px 0; font-size: 12px; color: #1976d2;">
-          (Menos de 1 año en la empresa: 1x salario)
-        </p>
-        <p *ngIf="currentUser()?.startDate && calculateYearsWorked(currentUser()!.startDate!) >= 1" style="margin: 4px 0; font-size: 12px; color: #1976d2;">
-          (1 año o más en la empresa: 2x salario)
+        <p style="margin: 4px 0; font-size: 12px; color: #1976d2;">
+          (Crédito máximo: 2x salario)
         </p>
         <p *ngIf="getApprovedCreditsCount() > 0" style="margin: 4px 0; font-size: 12px; color: #FF5722;">
           (Descontando {{ getApprovedCreditsCount() }} crédito(s) activo(s))
@@ -427,14 +424,19 @@
       </mat-form-field>
 
       <mat-form-field appearance="outline">
-        <mat-label>Número de cuotas</mat-label>
-        <mat-select [(ngModel)]="newCreditForm.installments">
-          <mat-option value="6">6 cuotas</mat-option>
-          <mat-option value="12">12 cuotas</mat-option>
-          <mat-option value="18">18 cuotas</mat-option>
-          <mat-option value="24">24 cuotas</mat-option>
-          <mat-option value="36">36 cuotas</mat-option>
-        </mat-select>
+        <mat-label>Número de cuotas (meses) <span style="color: #f44336;">*</span></mat-label>
+        <input matInput 
+               type="number" 
+               [(ngModel)]="newCreditForm.installments" 
+               min="1"
+               max="36"
+               step="1"
+               placeholder="Ingrese el número de meses (máximo 36)"
+               required>
+        <mat-hint>Máximo 36 meses</mat-hint>
+        <mat-error *ngIf="newCreditForm.installments && (newCreditForm.installments < 1 || newCreditForm.installments > 36)">
+          El número de cuotas debe estar entre 1 y 36 meses
+        </mat-error>
       </mat-form-field>
 
       <!-- Resumen del crédito -->
@@ -443,7 +445,10 @@
         <p style="margin: 4px 0;"><strong>Monto solicitado:</strong> {{ formatCurrency(newCreditForm.loanAmount) }}</p>
         <p style="margin: 4px 0;"><strong>Cuotas:</strong> {{ newCreditForm.installments }}</p>
         <p style="margin: 4px 0; font-size: 16px; font-weight: bold;">
-          <strong>Cuota mensual aproximada:</strong> {{ formatCurrency(newCreditForm.loanAmount / newCreditForm.installments) }}
+          <strong>Cuota mensual aproximada:</strong> {{ formatCurrency(calculateMonthlyPayment(newCreditForm.loanAmount, newCreditForm.installments)) }}
+        </p>
+        <p style="margin: 4px 0; font-size: 12px; color: #666;">
+          (Con interés del 1.3% mensual)
         </p>
       </div>
 
@@ -461,7 +466,7 @@
     <button mat-stroked-button (click)="cancelDialog()">Cancelar</button>
     <button mat-raised-button 
             color="primary" 
-            [disabled]="!newCreditForm.loanAmount || !newCreditForm.installments || newCreditForm.loanAmount <= 0 || newCreditForm.installments <= 0 || (maxCreditInfo && newCreditForm.loanAmount > maxCreditInfo.maxCredit)"
+            [disabled]="!newCreditForm.loanAmount || !newCreditForm.installments || newCreditForm.loanAmount <= 0 || newCreditForm.installments <= 0 || newCreditForm.installments > 36 || (maxCreditInfo && newCreditForm.loanAmount > maxCreditInfo.maxCredit)"
             (click)="generateAuthorization()">
       Continuar
     </button>
@@ -487,7 +492,7 @@
       <div style="margin-bottom: 20px;">
         <p><strong>Señores</strong></p>
         <p><strong>{{ authorizationDocument.companyName }}</strong></p>
-        <p>Ciudad</p>
+        <p>{{ authorizationDocument.city }}</p>
         <br>
         <p><strong>Valor Préstamo o Anticipo:</strong> {{ formatCurrency(authorizationDocument.loanAmount) }}</p>
         <p><strong>Nombres y Apellidos completos del Colaborador:</strong> {{ authorizationDocument.employeeName }}</p>
@@ -498,51 +503,45 @@
       <div style="margin-bottom: 20px;">
         <p><strong>Constancia Recibo y Autorización,</strong></p>
         <p>Por medio del presente documento, autorizo expresamente a la empresa {{ authorizationDocument.companyName }}, para que se me descuente de mis salarios la suma de {{ authorizationDocument.loanAmountWords }} PESOS ({{ formatCurrency(authorizationDocument.loanAmount) }}), por concepto de préstamo sobre mi salario, los cuales fueron solicitados por mí y que declaro haber recibido de {{ authorizationDocument.companyName.toUpperCase() }} y que pagaré incondicionalmente de la siguiente forma y hasta la cancelación total:</p>
-        
-        <p><strong>{{ authorizationDocument.installmentWords }} ({{ authorizationDocument.totalInstallments }}) Cuota(s) que serán descontadas de mi nómina</strong></p>
       </div>
 
-      <!-- Tabla de Amortización -->
-      <div style="margin-bottom: 20px;">
-        <p style="font-weight: bold; margin-bottom: 10px;">Tabla de Amortización</p>
-        <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px;">
-          <thead>
-            <tr style="background-color: #e8f5e9;">
-              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Cuota #</th>
-              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Cuota a Pagar</th>
-              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Interés</th>
-              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Capital Amortizado</th>
-              <th style="border: 1px solid #000; padding: 8px; text-align: center;">Capital Vivo</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let row of authorizationDocument.amortizationTable">
-              <td style="border: 1px solid #000; padding: 8px; text-align: center;">{{ row.installment }}</td>
-              <td style="border: 1px solid #000; padding: 8px; text-align: right;">{{ formatCurrency(row.payment) }}</td>
-              <td style="border: 1px solid #000; padding: 8px; text-align: right;">{{ formatCurrency(row.interest) }}</td>
-              <td style="border: 1px solid #000; padding: 8px; text-align: right;">{{ formatCurrency(row.principal) }}</td>
-              <td style="border: 1px solid #000; padding: 8px; text-align: right;">{{ formatCurrency(row.balance) }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Resumen de cuotas -->
+      <div style="margin-bottom: 12px;">
+        <p><strong>{{ authorizationDocument.totalInstallments | number:'1.0-0' | i18nPlural: { '=1':'UNA', 'other':'' } }}</strong><strong> ({{ authorizationDocument.totalInstallments }}) Cuota(s) que serán descontadas de mi nómina</strong></p>
       </div>
 
-      <!-- Términos y condiciones -->
-      <div style="margin-bottom: 20px;">
+      <!-- Tabla de amortización resumida -->
+      <table style="width:100%; border-collapse: collapse; margin-bottom: 20px;">
+        <thead>
+          <tr>
+            <th style="text-align:left; border-bottom:1px solid #ccc; padding: 8px;">Cuota #</th>
+            <th style="text-align:left; border-bottom:1px solid #ccc; padding: 8px;">Fecha de Quincena en que se hará la deducción</th>
+            <th style="text-align:left; border-bottom:1px solid #ccc; padding: 8px;">Valor por Deducir</th>
+            <th style="text-align:left; border-bottom:1px solid #ccc; padding: 8px;">Descontar de:</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of authorizationDocument.paymentSchedule">
+            <td style="padding: 8px;">{{ row.number }}</td>
+            <td style="padding: 8px;">{{ row.date }}</td>
+            <td style="padding: 8px;">{{ formatCurrency(row.amount) }}</td>
+            <td style="padding: 8px;">Nómina</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Cláusula de deducción en liquidación -->
+      <div style="margin-top: 16px;">
         <p>Así mismo, autorizo expresamente al Empleador / Empresa para que retenga y cobre de mi liquidación final de Prestaciones Sociales, salarios, vacaciones y eventuales indemnizaciones, los saldos insolutos de la obligación contraída, en el evento de que llegase a finalizar mi contrato de trabajo antes de completar el pago total de esta obligación adquirida.</p>
-        <p><strong>Autorizo deducción,</strong></p>
       </div>
 
-      <!-- Espacios para firmas -->
-      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-        <div style="text-align: center;">
-          <p>_________________________</p>
-          <p><strong>Firma del Empleado</strong></p>
-        </div>
-        <div style="text-align: center;">
-          <p>_________________________</p>
-          <p><strong>Firma del Empleador</strong></p>
-        </div>
+      <!-- Firma -->
+      <div style="margin-top: 30px;">
+        <p><strong>Autorizo deducción,</strong></p>
+        <br><br>
+        <p>________________</p>
+        <p>Nombre: {{ authorizationDocument.employeeName }}</p>
+        <p>c.c. {{ authorizationDocument.employeeId }}					Autorización del Empleador____________</p>
       </div>
     </div>
   </div>

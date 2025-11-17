@@ -16,12 +16,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatChipsModule } from '@angular/material/chips';
 import { AuthService, User } from '../services/auth.service';
+import { ApiService } from '../services/api.service';
 
 export interface UserForm {
   id?: string | number;
   firstName: string;
   lastName: string;
   email: string;
+  emailPrefix?: string; // Parte antes del @ para el input
   documentNumber?: string;
   birthDate?: string;
   position?: string;
@@ -348,23 +350,35 @@ export interface ColumnConfig {
         </div>
         
         <form class="user-form" (ngSubmit)="saveUser()" #formRef="ngForm">
+          <!-- Información sobre campos obligatorios -->
+          <div class="required-fields-info">
+            <mat-icon>info</mat-icon>
+            <p><strong>Campos obligatorios:</strong> Nombres, Apellidos, Email (solo la parte antes del @, el dominio @sectorial.co se agrega automáticamente) y Rol. Los demás campos son opcionales.</p>
+          </div>
+
           <!-- Información Personal -->
           <h3>Información Personal</h3>
           <div class="form-row">
             <mat-form-field appearance="outline">
-              <mat-label>Nombres</mat-label>
+              <mat-label>Nombres <span class="required">*</span></mat-label>
               <input matInput 
                      [(ngModel)]="userForm.firstName" 
                      name="firstName" 
                      required>
+              <mat-error *ngIf="formRef.form.get('firstName')?.hasError('required')">
+                Los nombres son obligatorios
+              </mat-error>
             </mat-form-field>
             
             <mat-form-field appearance="outline">
-              <mat-label>Apellidos</mat-label>
+              <mat-label>Apellidos <span class="required">*</span></mat-label>
               <input matInput 
                      [(ngModel)]="userForm.lastName" 
                      name="lastName" 
                      required>
+              <mat-error *ngIf="formRef.form.get('lastName')?.hasError('required')">
+                Los apellidos son obligatorios
+              </mat-error>
             </mat-form-field>
           </div>
 
@@ -387,12 +401,23 @@ export interface ColumnConfig {
 
           <div class="form-row">
             <mat-form-field appearance="outline">
-              <mat-label>Email</mat-label>
+              <mat-label>Email <span class="required">*</span></mat-label>
               <input matInput 
-                     type="email"
-                     [(ngModel)]="userForm.email" 
-                     name="email" 
-                     required>
+                     type="text"
+                     [(ngModel)]="userForm.emailPrefix" 
+                     name="emailPrefix" 
+                     required
+                     pattern="[a-zA-Z0-9._%+-]+"
+                     placeholder="usuario"
+                     (blur)="formatEmail()"
+                     maxlength="100">
+              <span matSuffix class="email-suffix">@sectorial.co</span>
+              <mat-error *ngIf="formRef.form.get('emailPrefix')?.hasError('required')">
+                El email es obligatorio
+              </mat-error>
+              <mat-error *ngIf="formRef.form.get('emailPrefix')?.hasError('pattern')">
+                Solo se permiten letras, números, puntos, guiones bajos y guiones
+              </mat-error>
             </mat-form-field>
           </div>
 
@@ -436,13 +461,18 @@ export interface ColumnConfig {
 
           <div class="form-row">
             <mat-form-field appearance="outline">
-              <mat-label>Rol en el Sistema</mat-label>
+              <mat-label>Rol en el Sistema <span class="required">*</span></mat-label>
               <mat-select [(ngModel)]="userForm.role" name="role" required>
-                <mat-option value="user">Usuario</mat-option>
-                <mat-option value="admin" *ngIf="canManageUsers()">Administrador</mat-option>
-                <mat-option value="superadmin" *ngIf="authService.isSuperAdmin()">Super Administrador</mat-option>
-                <mat-option value="technology">Soporte Técnico</mat-option>
+                <mat-option *ngFor="let role of roles" [value]="role.name">
+                  {{ role.name === 'superadmin' ? 'Super Administrador' : 
+                     role.name === 'admin' ? 'Administrador' : 
+                     role.name === 'technology' ? 'Soporte Técnico' : 
+                     role.name === 'user' ? 'Usuario' : role.name }}
+                </mat-option>
               </mat-select>
+              <mat-error *ngIf="formRef.form.get('role')?.hasError('required')">
+                El rol es obligatorio
+              </mat-error>
             </mat-form-field>
           </div>
 
@@ -895,6 +925,52 @@ export interface ColumnConfig {
       grid-template-columns: 1fr;
     }
 
+    .required {
+      color: #f44336;
+      font-weight: bold;
+    }
+
+    .email-suffix {
+      color: #666;
+      font-weight: 500;
+      padding-left: 4px;
+    }
+
+    .required-fields-info {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 12px;
+      background-color: #e3f2fd;
+      border-radius: 8px;
+      border-left: 4px solid #2196f3;
+      margin-bottom: 16px;
+    }
+
+    .required-fields-info mat-icon {
+      color: #2196f3;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .required-fields-info p {
+      margin: 0;
+      font-size: 14px;
+      color: #1976d2;
+      line-height: 1.5;
+    }
+
+    .email-prefix {
+      color: #666;
+      margin-right: 8px;
+      font-weight: 500;
+      user-select: none;
+    }
+
+    .mat-mdc-form-field .mat-mdc-text-field-wrapper .mat-mdc-form-field-flex {
+      align-items: center;
+    }
+
     .checkbox-group {
       display: flex;
       flex-direction: column;
@@ -1011,6 +1087,7 @@ export class UsersComponent implements OnInit {
   showDialog = false;
   isEditing = false;
   userForm: UserForm = this.getEmptyUserForm();
+  roles: any[] = []; // Roles cargados desde el backend
 
   // Tabla de tipos de contrato
   contractTypes: ContractType[] = [
@@ -1023,7 +1100,8 @@ export class UsersComponent implements OnInit {
   constructor(
     public authService: AuthService,
     private dialog: MatDialog,
-    private http: HttpClient
+    private http: HttpClient,
+    private apiService: ApiService
   ) {}
 
   ngOnInit() {
@@ -1069,6 +1147,22 @@ export class UsersComponent implements OnInit {
     
     console.log('✅ Usuario autenticado con permisos, cargando usuarios');
     this.loadUsers();
+    this.loadRoles();
+  }
+
+  /**
+   * Carga los roles desde el backend
+   */
+  loadRoles() {
+    this.apiService.getRoles().subscribe({
+      next: (roles) => {
+        console.log('✅ Roles cargados:', roles);
+        this.roles = roles;
+      },
+      error: (error) => {
+        console.error('❌ Error cargando roles:', error);
+      }
+    });
   }
 
   /**
@@ -1085,7 +1179,7 @@ export class UsersComponent implements OnInit {
     return {
       firstName: '',
       lastName: '',
-      email: '',
+      email: '', // Solo la parte antes del @
       documentNumber: '',
       birthDate: '',
       position: '',
@@ -1104,61 +1198,60 @@ export class UsersComponent implements OnInit {
   }
 
   /**
-   * Carga la lista de usuarios
+   * Formatea el email agregando @sectorial.co
+   */
+  formatEmail() {
+    if (this.userForm.emailPrefix) {
+      // Remover @sectorial.co si ya está incluido accidentalmente
+      let prefix = this.userForm.emailPrefix.replace('@sectorial.co', '').replace('@', '').trim();
+      this.userForm.emailPrefix = prefix;
+      this.userForm.email = prefix + '@sectorial.co';
+    }
+  }
+
+  /**
+   * Carga la lista de usuarios desde el API
    */
   loadUsers() {
-    // Datos mockados por ahora - En producción esto vendría del API
-    const mockUsers: User[] = [
-      {
-        id: 1,
-        firstName: 'Pedro',
-        lastName: 'García',
-        email: 'pedro.garcia@helpdesk.com',
-        documentNumber: '12345678',
-        birthDate: '1990-05-15',
-        position: 'Desarrollador',
-        startDate: '2024-01-15',
-        salary: 3500000,
-        hasDebt: true,
-        debtAmount: 5000000, // Debe 5 millones
-        paidAmount: 1500000, // Ha pagado 1.5 millones
-        installmentAmount: 250000, // Cuota de 250 mil
-        interestRate: 2.5, // Interés del 2.5%
-        role: 'user',
-        contractType: 'indefinido',
-        mustChangePassword: true
+    console.log('🔄 Cargando usuarios desde el API...');
+    
+    this.apiService.getAllUsers().subscribe({
+      next: (users) => {
+        console.log('✅ Usuarios cargados desde el API:', users);
+        
+        // Mapear los usuarios del API al formato esperado
+        const mappedUsers: User[] = users.map((user: any) => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          documentNumber: user.documentNumber,
+          birthDate: user.birthDate ? new Date(user.birthDate).toISOString().split('T')[0] : undefined,
+          position: user.position,
+          startDate: user.startDate ? new Date(user.startDate).toISOString().split('T')[0] : undefined,
+          salary: user.salary,
+          hasDebt: user.hasDebt || false,
+          debtAmount: user.debtAmount,
+          paidAmount: user.paidAmount,
+          installmentAmount: user.installmentAmount,
+          interestRate: user.interestRate,
+          role: user.role?.name || user.role || 'user',
+          contractType: user.contractType || 'indefinido',
+          mustChangePassword: user.mustChangePassword || false,
+          isActive: user.isActive !== undefined ? user.isActive : true,
+          pendingApproval: user.pendingApproval || false,
+          pendingActivation: user.pendingActivation || false
+        }));
+        
+        this.users.set(mappedUsers);
+        console.log(`✅ ${mappedUsers.length} usuarios cargados exitosamente`);
       },
-      {
-        id: 5,
-        firstName: 'Juan',
-        lastName: 'Pérez',
-        email: 'juan.perez@helpdesk.com',
-        documentNumber: '99887766',
-        birthDate: '1980-11-25',
-        position: 'Administrador',
-        startDate: '2020-01-01',
-        salary: 8000000,
-        hasDebt: false,
-        role: 'admin',
-        contractType: 'indefinido',
-      },
-      {
-        id: 9,
-        firstName: 'Richard',
-        lastName: 'Administrador',
-        email: 'richy9.13@gmail.com',
-        documentNumber: '1000000002',
-        birthDate: '1990-01-01',
-        position: 'Super Administrador',
-        startDate: '2024-01-01',
-        salary: 10000000,
-        hasDebt: false,
-        role: 'superadmin',
-        contractType: 'indefinido',
+      error: (error) => {
+        console.error('❌ Error cargando usuarios desde el API:', error);
+        // En caso de error, mostrar mensaje al usuario
+        alert('Error al cargar los usuarios. Por favor, intenta nuevamente.');
       }
-    ];
-
-    this.users.set(mockUsers);
+    });
   }
 
   /**
@@ -1250,12 +1343,16 @@ export class UsersComponent implements OnInit {
   editUser(user: User) {
     if (!this.canManageUsers()) return;
     
+    // Extraer la parte antes del @ del email
+    const emailPrefix = user.email ? user.email.split('@')[0] : '';
+    
     this.isEditing = true;
     this.userForm = {
       id: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      emailPrefix: emailPrefix, // Solo la parte antes del @
       documentNumber: user.documentNumber || '',
       birthDate: user.birthDate || '',
       position: user.position || '',
@@ -1284,7 +1381,7 @@ export class UsersComponent implements OnInit {
     if (!this.canManageUsers()) return;
     
     if (this.isEditing) {
-      // Actualizar usuario existente
+      // Actualizar usuario existente (por ahora solo actualiza localmente)
       const userIndex = this.users().findIndex(u => u.id === this.userForm.id);
       if (userIndex !== -1) {
         const updatedUsers = [...this.users()];
@@ -1305,51 +1402,68 @@ export class UsersComponent implements OnInit {
         };
         this.users.set(updatedUsers);
         alert('Usuario actualizado correctamente');
+        this.closeDialog();
       }
+      return;
     } else {
+      // Formatear email antes de validar
+      this.formatEmail();
+
+      // Validar campos obligatorios
+      if (!this.userForm.firstName || !this.userForm.lastName || !this.userForm.emailPrefix || !this.userForm.role) {
+        alert('Por favor completa todos los campos obligatorios: Nombres, Apellidos, Email y Rol');
+        return;
+      }
+
+      // Validar que el email tenga contenido
+      if (!this.userForm.emailPrefix || this.userForm.emailPrefix.trim() === '') {
+        alert('Por favor ingresa un email válido');
+        return;
+      }
+
+      // Construir el email completo
+      const fullEmail = `${this.userForm.emailPrefix.trim()}@sectorial.co`;
+
+      // Buscar el roleId del rol seleccionado
+      const selectedRole = this.roles.find(r => r.name === this.userForm.role);
+      if (!selectedRole) {
+        alert('Error: No se encontró el rol seleccionado. Por favor, recarga la página.');
+        return;
+      }
+
       // Crear nuevo usuario usando el backend real
       const userData = {
         firstName: this.userForm.firstName,
         lastName: this.userForm.lastName,
-        email: this.userForm.email,
-        documentNumber: this.userForm.documentNumber,
-        birthDate: this.userForm.birthDate,
-        position: this.userForm.position,
-        salary: this.userForm.salary,
-        hasDebt: this.userForm.hasDebt,
-        startDate: this.userForm.startDate,
-        role: this.userForm.role,
-        contractType: this.userForm.contractType,
-        debtAmount: this.userForm.hasDebt ? this.userForm.debtAmount : null,
-        paidAmount: this.userForm.hasDebt ? this.userForm.paidAmount : null,
-        installmentAmount: this.userForm.hasDebt ? this.userForm.installmentAmount : null,
-        interestRate: this.userForm.hasDebt ? this.userForm.interestRate : null
+        email: fullEmail,
+        password: this.userForm.password || '123', // Contraseña por defecto
+        documentNumber: this.userForm.documentNumber || null,
+        birthDate: this.userForm.birthDate || null,
+        position: this.userForm.position || null,
+        salary: this.userForm.salary ? parseFloat(this.userForm.salary.toString()) : null,
+        startDate: this.userForm.startDate || null,
+        contractType: this.userForm.contractType || null,
+        roleId: selectedRole.id, // Usar el ID del rol, no el nombre
+        // Campos de deuda solo si tiene deuda
+        ...(this.userForm.hasDebt ? {
+          debtAmount: this.userForm.debtAmount ? parseFloat(this.userForm.debtAmount.toString()) : null,
+          paidAmount: this.userForm.paidAmount ? parseFloat(this.userForm.paidAmount.toString()) : null,
+          installmentAmount: this.userForm.installmentAmount ? parseFloat(this.userForm.installmentAmount.toString()) : null,
+          interestRate: this.userForm.interestRate ? parseFloat(this.userForm.interestRate.toString()) : null
+        } : {})
       };
 
-      this.http.post('http://localhost:3001/api/create-user', userData).subscribe({
+      console.log('📤 Enviando datos de usuario al backend:', userData);
+
+      this.apiService.createUser(userData).subscribe({
         next: (response: any) => {
           console.log('✅ Usuario creado exitosamente en backend:', response);
           
-          // Agregar el usuario a la lista local
-          const newUser: User = {
-            id: response.user.id,
-            firstName: response.user.firstName,
-            lastName: response.user.lastName,
-            email: response.user.email,
-            documentNumber: response.user.documentNumber,
-            birthDate: response.user.birthDate,
-            position: response.user.position,
-            salary: response.user.salary,
-            hasDebt: response.user.hasDebt,
-            startDate: response.user.startDate,
-            role: response.user.role,
-            contractType: response.user.contractType,
-            mustChangePassword: response.user.mustChangePassword
-          };
+          // Recargar la lista de usuarios
+          this.loadUsers();
           
-          this.users.set([...this.users(), newUser]);
-          
-          alert(`Usuario creado correctamente.\nContraseña inicial: ${response.defaultPassword}\nEl usuario deberá cambiarla en su primer login.`);
+          alert(`✅ Usuario creado correctamente.\n\nEmail: ${response.email}\nContraseña inicial: 123\n\nEl usuario deberá cambiarla en su primer inicio de sesión.`);
+          this.closeDialog();
         },
         error: (error) => {
           console.error('❌ Error creando usuario:', error);
@@ -1357,14 +1471,16 @@ export class UsersComponent implements OnInit {
           
           if (error.error?.error) {
             errorMessage = error.error.error;
+          } else if (error.status === 400) {
+            errorMessage = 'Datos inválidos. Verifica que todos los campos obligatorios estén completos.';
+          } else if (error.status === 401) {
+            errorMessage = 'No tienes permisos para crear usuarios';
           }
           
-          alert(errorMessage);
+          alert(`❌ ${errorMessage}`);
         }
       });
     }
-    
-    this.closeDialog();
   }
 
   /**
