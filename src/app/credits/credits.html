@@ -507,7 +507,7 @@
 
       <!-- Resumen de cuotas -->
       <div style="margin-bottom: 12px;">
-        <p><strong>{{ authorizationDocument.totalInstallments | number:'1.0-0' | i18nPlural: { '=1':'UNA', 'other':'' } }}</strong><strong> ({{ authorizationDocument.totalInstallments }}) Cuota(s) que serán descontadas de mi nómina</strong></p>
+        <p><strong>{{ toNumber(authorizationDocument.totalInstallments) | i18nPlural: { '=1':'UNA', 'other':'' } }} ({{ authorizationDocument.totalInstallments }}) Cuota(s) que serán descontadas de mi nómina</strong></p>
       </div>
 
       <!-- Tabla de amortización resumida -->

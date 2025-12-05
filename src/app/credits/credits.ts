@@ -229,6 +229,10 @@ export class Credits implements OnInit {
     return `${value}%`;
   }
 
+  toNumber(value: any): number {
+    return Number(value) || 0;
+  }
+
   constructor(
     private dialog: MatDialog,
     private apiService: ApiService,
